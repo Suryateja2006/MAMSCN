@@ -1,0 +1,14 @@
+apiVersion: 1
+
+datasources:
+  - name: MySQL-SNMP
+    type: mysql
+    url: host.docker.internal:3306
+    user: root
+    secureJsonData:
+      password: "Surya@2006"
+    database: mon
+    jsonData:
+      sslMode: "skip-verify"
+    access: proxy
+    isDefault: true
