@@ -1,0 +1,93 @@
+{
+  "datasource": {
+    "type": "mysql",
+    "uid": "MySQL-SNMP"
+  },
+  "fieldConfig": {
+    "defaults": {
+      "custom": {
+        "drawStyle": "line",
+        "lineInterpolation": "linear",
+        "barAlignment": 0,
+        "lineWidth": 1,
+        "fillOpacity": 10,
+        "gradientMode": "none",
+        "spanNulls": false,
+        "showPoints": "auto",
+        "pointSize": 5,
+        "stacking": {
+          "mode": "none",
+          "group": "A"
+        },
+        "axisPlacement": "auto",
+        "axisLabel": "",
+        "axisColorMode": "text",
+        "scaleDistribution": {
+          "type": "linear"
+        },
+        "axisCenteredZero": false,
+        "hideFrom": {
+          "tooltip": false,
+          "viz": false,
+          "legend": false
+        },
+        "thresholdsStyle": {
+          "mode": "off"
+        }
+      },
+      "color": {
+        "mode": "palette-classic"
+      },
+      "mappings": [],
+      "thresholds": {
+        "mode": "absolute",
+        "steps": [
+          {
+            "color": "green",
+            "value": null
+          },
+          {
+            "color": "red",
+            "value": -0.1
+          }
+        ]
+      }
+    },
+    "overrides": []
+  },
+  "gridPos": {
+    "h": 9,
+    "w": 12,
+    "x": 0,
+    "y": 0
+  },
+  "id": 1,
+  "options": {
+    "tooltip": {
+      "mode": "single",
+      "sort": "none"
+    },
+    "legend": {
+      "showLegend": true,
+      "displayMode": "list",
+      "placement": "bottom",
+      "calcs": []
+    }
+  },
+  "targets": [
+    {
+      "dataset": "mon",
+      "datasource": {
+        "type": "mysql",
+        "uid": "MySQL-SNMP"
+      },
+      "format": "time_series",
+      "rawSql": "SELECT\n  $__timeGroupAlias(ts, '1m') AS time,\n  AVG(anomaly_score) AS value\nFROM (\n  SELECT\n    STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') AS ts,\n    anomaly_score\n  FROM snmp_metrics_ai\n) s\nWHERE\n  $__timeFilter(ts)\nGROUP BY time\nORDER BY time",
+      "refId": "A",
+      "table": "snmp_metrics_ai",
+      "timeColumn": "timestamp"
+    }
+  ],
+  "title": "Anomaly Score Over Time",
+  "type": "timeseries"
+}

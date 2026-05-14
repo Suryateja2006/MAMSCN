@@ -113,7 +113,7 @@
             "uid": "MySQL-SNMP"
           },
           "format": "time_series",
-          "rawSql": "SELECT\n  FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f')) / 60) * 60) AS time,\n  AVG(anomaly_score) AS anomaly_score\nFROM snmp_metrics_ai\nWHERE\n  UNIX_TIMESTAMP(STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f')) BETWEEN $__unixEpochFrom() AND $__unixEpochTo()\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(ts, '1m') AS time,\n  AVG(CAST(anomaly_score AS DECIMAL(10,6))) AS value\nFROM (\n  SELECT\n    STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') AS ts,\n    anomaly_score\n  FROM snmp_metrics_ai\n) s\nWHERE\n  ts IS NOT NULL\n  AND $__timeFilter(ts)\nGROUP BY time\nORDER BY time",
           "refId": "A",
           "table": "snmp_metrics_ai",
           "timeColumn": "timestamp"
@@ -174,7 +174,7 @@
             "uid": "MySQL-SNMP"
           },
           "format": "table",
-          "rawSql": "SELECT anomaly_type, COUNT(id) AS count\nFROM snmp_metrics_ai\nWHERE anomaly_flag='Anomaly'\nGROUP BY anomaly_type",
+          "rawSql": "SELECT 'polls' AS metric, COUNT(*) AS count\nFROM (\n  SELECT STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') AS ts\n  FROM snmp_metrics_ai\n) s\nWHERE $__timeFilter(ts)",
           "refId": "A"
         }
       ],
@@ -270,7 +270,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 18
       },
       "id": 3,
       "options": {
@@ -294,7 +294,7 @@
             "uid": "MySQL-SNMP"
           },
           "format": "table",
-          "rawSql": "SELECT STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') AS timestamp, host, ip, anomaly_score, anomaly_flag, anomaly_type\nFROM snmp_metrics_ai\nORDER BY STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') DESC\nLIMIT 50",
+          "rawSql": "SELECT DATE_FORMAT(STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f'), '%Y-%m-%d %H:%i:%s') AS timestamp, host, ip, anomaly_score, anomaly_flag, anomaly_type\nFROM snmp_metrics_ai\nORDER BY STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') DESC\nLIMIT 50",
           "refId": "A"
         }
       ],
@@ -316,7 +316,7 @@
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "",
+  "timezone": "Asia/Kolkata",
   "title": "SNMP Anomaly Detection Dashboard",
   "uid": "snmp-dashboard-ai"
 }

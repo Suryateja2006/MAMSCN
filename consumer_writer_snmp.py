@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS snmp_metrics_ai (
     results JSON,
     anomaly_score FLOAT,
     anomaly_flag VARCHAR(20),
-    anomaly_type VARCHAR(50),  # 🧠 NEW
+    anomaly_type VARCHAR(50),  
     anomaly_timestamp VARCHAR(30)
 )
 """)
