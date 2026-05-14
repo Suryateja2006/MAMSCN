@@ -1,0 +1,7 @@
+kafka-python
+python-dotenv
+mysql-connector-python
+joblib
+pandas
+numpy
+scikit-learn==1.7.2

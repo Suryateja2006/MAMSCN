@@ -1,24 +1,37 @@
 import asyncio
 import csv
 import json
+import os
 from datetime import datetime
 from kafka import KafkaProducer
+from kafka.errors import NoBrokersAvailable
+import time
 from pysnmp.hlapi.v3arch.asyncio import (
     SnmpEngine, CommunityData, UdpTransportTarget,
     ContextData, ObjectType, ObjectIdentity, get_cmd
 )
 
 # --- CONFIGURATION ---
-KAFKA_BOOTSTRAP = "localhost:9092"
-KAFKA_TOPIC = "snmp_metrics"
+KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "kafka:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "snmp_metrics")
 POLL_INTERVAL = 10  # seconds
 LOCAL_CSV_LOG = "snmp_polled_data.csv"
 
-# Kafka producer
-producer = KafkaProducer(
-    bootstrap_servers=KAFKA_BOOTSTRAP,
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
-)
+def make_producer(retries=12, delay=5):
+    for attempt in range(retries):
+        try:
+            p = KafkaProducer(
+                bootstrap_servers=KAFKA_BOOTSTRAP,
+                value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            )
+            return p
+        except NoBrokersAvailable:
+            print(f"Kafka not available yet, retrying in {delay}s ({attempt+1}/{retries})")
+            time.sleep(delay)
+    raise RuntimeError("Unable to connect to Kafka broker")
+
+# Kafka producer (with retries)
+producer = make_producer()
 
 # CSV log header
 with open(LOCAL_CSV_LOG, "w", newline="") as f:

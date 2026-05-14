@@ -3,6 +3,8 @@ import json
 import csv
 from datetime import datetime
 from kafka import KafkaConsumer
+from kafka.errors import NoBrokersAvailable
+import time
 from dotenv import load_dotenv
 import mysql.connector
 import joblib
@@ -12,8 +14,8 @@ import pandas as pd
 load_dotenv()
 
 # --- CONFIG ---
-KAFKA_BOOTSTRAP = "localhost:9092"
-KAFKA_TOPIC = "snmp_metrics"
+KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "kafka:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "snmp_metrics")
 OUTPUT_CSV = "snmp_consumed_ai.csv"
 
 ANOMALY_THRESHOLD = -0.2  # Adjust based on dataset
@@ -70,12 +72,27 @@ label_encoder = joblib.load("./models/label_encoder.pkl")
 print("✅ Models and scalers loaded")
 
 # --- Setup MySQL ---
-db = mysql.connector.connect(
-    host=os.getenv("DB_HOST", "localhost"),
-    user=os.getenv("DB_USER", "root"),
-    password=os.getenv("DB_PASSWORD", "Aakash10"),
-    database=os.getenv("DB_NAME", "mon")
-)
+import time
+from mysql.connector import Error
+
+db = None
+
+for i in range(15):
+    try:
+        db = mysql.connector.connect(
+            host=os.getenv("DB_HOST", "mysql"),
+            user=os.getenv("DB_USER", "root"),
+            password=os.getenv("DB_PASSWORD", "root"),
+            database=os.getenv("DB_NAME", "mon")
+        )
+        print("✅ MySQL connected")
+        break
+    except Error as e:
+        print(f"⏳ MySQL not ready, retrying... ({i+1}/15)")
+        time.sleep(5)
+
+if db is None:
+    raise Exception("❌ Could not connect to MySQL")
 cursor = db.cursor()
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS snmp_metrics_ai (
@@ -102,14 +119,24 @@ with open(OUTPUT_CSV, "w", newline="") as f:
         "anomaly_flag", "anomaly_type", "anomaly_timestamp"
     ])
 
-# --- Kafka Consumer ---
-consumer = KafkaConsumer(
-    KAFKA_TOPIC,
-    bootstrap_servers=KAFKA_BOOTSTRAP,
-    auto_offset_reset="latest",
-    enable_auto_commit=True,
-    value_deserializer=lambda m: json.loads(m.decode("utf-8"))
-)
+# --- Kafka Consumer (with retries) ---
+def make_consumer(retries=12, delay=5):
+    for attempt in range(retries):
+        try:
+            c = KafkaConsumer(
+                KAFKA_TOPIC,
+                bootstrap_servers=KAFKA_BOOTSTRAP,
+                auto_offset_reset="latest",
+                enable_auto_commit=True,
+                value_deserializer=lambda m: json.loads(m.decode("utf-8"))
+            )
+            return c
+        except NoBrokersAvailable:
+            print(f"Kafka not available yet, retrying in {delay}s ({attempt+1}/{retries})")
+            time.sleep(delay)
+    raise RuntimeError("Unable to connect to Kafka broker")
+
+consumer = make_consumer()
 
 print("📡 Waiting for SNMP messages...")
 

@@ -17,11 +17,14 @@ services:
       - zookeeper
     ports:
       - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
   mysql:
@@ -29,20 +32,26 @@ services:
     container_name: mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: snmp_db
+      MYSQL_ROOT_PASSWORD: Surya@2006
+      MYSQL_DATABASE: mon
       MYSQL_USER: snmpuser
       MYSQL_PASSWORD: snmppass
     ports:
       - "5000:3306"   
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pSurya@2006"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   grafana:
     image: grafana/grafana:10.0.0
     container_name: grafana
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     ports:
       - "5001:3000"
     environment:
@@ -51,6 +60,43 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
+
+  snmp_producer:
+    build:
+      context: .
+      dockerfile: producer/Dockerfile
+    container_name: snmp_producer
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - KAFKA_TOPIC=snmp_metrics
+      - TZ=Asia/Kolkata
+    volumes:
+      - ./inventory.csv:/app/inventory.csv:ro
+
+  snmp_consumer:
+    build:
+      context: .
+      dockerfile: consumer/Dockerfile
+    container_name: snmp_consumer
+    depends_on:
+      kafka:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - KAFKA_TOPIC=snmp_metrics
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=Surya@2006
+      - DB_NAME=mon
+      - TZ=Asia/Kolkata
+    volumes:
+      - ./models:/app/models:ro
 
 volumes:
   mysql_data:

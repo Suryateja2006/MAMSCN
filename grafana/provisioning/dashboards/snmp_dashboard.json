@@ -113,7 +113,7 @@
             "uid": "MySQL-SNMP"
           },
           "format": "time_series",
-          "rawSql": "SELECT\n  $__timeGroup(ts, '1m') AS time,\n  AVG(CAST(anomaly_score AS DECIMAL(10,6))) AS value\nFROM (\n  SELECT\n    STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') AS ts,\n    anomaly_score\n  FROM snmp_metrics_ai\n) s\nWHERE\n  ts IS NOT NULL\n  AND $__timeFilter(ts)\nGROUP BY time\nORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(ts_utc, '1m') AS time,\n  AVG(CAST(anomaly_score AS DECIMAL(10,6))) AS value\nFROM (\n  SELECT\n    STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') AS ts_local,\n    STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') - INTERVAL 330 MINUTE AS ts_utc,\n    anomaly_score\n  FROM snmp_metrics_ai\n) s\nWHERE\n  ts_utc IS NOT NULL\n  AND $__timeFilter(ts_utc)\nGROUP BY time\nORDER BY time",
           "refId": "A",
           "table": "snmp_metrics_ai",
           "timeColumn": "timestamp"
@@ -174,7 +174,7 @@
             "uid": "MySQL-SNMP"
           },
           "format": "table",
-          "rawSql": "SELECT 'polls' AS metric, COUNT(*) AS count\nFROM (\n  SELECT STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') AS ts\n  FROM snmp_metrics_ai\n) s\nWHERE $__timeFilter(ts)",
+          "rawSql": "SELECT 'polls' AS metric, COUNT(*) AS count\nFROM (\n  SELECT STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') - INTERVAL 330 MINUTE AS ts_utc\n  FROM snmp_metrics_ai\n) s\nWHERE $__timeFilter(ts_utc)",
           "refId": "A"
         }
       ],
@@ -294,11 +294,64 @@
             "uid": "MySQL-SNMP"
           },
           "format": "table",
-          "rawSql": "SELECT DATE_FORMAT(ts, '%Y-%m-%d %H:%i:%s') AS timestamp, host, ip, anomaly_score, anomaly_flag, anomaly_type\nFROM (\n  SELECT\n    STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') AS ts,\n    host,\n    ip,\n    anomaly_score,\n    anomaly_flag,\n    anomaly_type\n  FROM snmp_metrics_ai\n) s\nWHERE ts IS NOT NULL\nAND $__timeFilter(ts)\nORDER BY ts DESC\nLIMIT 50",
+          "rawSql": "SELECT DATE_FORMAT(ts_local, '%Y-%m-%d %H:%i:%s') AS timestamp, host, ip, anomaly_score, anomaly_flag, anomaly_type\nFROM (\n  SELECT\n    STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') AS ts_local,\n    STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') - INTERVAL 330 MINUTE AS ts_utc,\n    host,\n    ip,\n    anomaly_score,\n    anomaly_flag,\n    anomaly_type\n  FROM snmp_metrics_ai\n) s\nWHERE ts_utc IS NOT NULL\nAND $__timeFilter(ts_utc)\nORDER BY ts_local DESC\nLIMIT 50",
           "refId": "A"
         }
       ],
       "title": "Recent SNMP Metrics & Anomalies",
+      
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "MySQL-SNMP"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "id": 4,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "targets": [
+        {
+          "dataset": "mon",
+          "datasource": {
+            "type": "mysql",
+            "uid": "MySQL-SNMP"
+          },
+          "format": "table",
+          "rawSql": "SELECT * FROM snmp_metrics_ai ORDER BY id DESC LIMIT 200",
+          "refId": "A"
+        }
+      ],
+      "title": "All Rows (Latest 200)",
       "type": "table"
     }
   ],
