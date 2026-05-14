@@ -148,7 +148,7 @@ file_name = "all_data (3).csv"
 file_path = os.path.join(base_path, file_name)
 
 df = pd.read_csv(file_path)
-df = df.head(1000)
+df = df.head(3000)
 
 print(f"[INFO] Dataset Loaded Successfully")
 print(f"[INFO] Shape : {df.shape}")

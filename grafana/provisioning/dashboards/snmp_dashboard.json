@@ -294,7 +294,7 @@
             "uid": "MySQL-SNMP"
           },
           "format": "table",
-          "rawSql": "SELECT DATE_FORMAT(STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f'), '%Y-%m-%d %H:%i:%s') AS timestamp, host, ip, anomaly_score, anomaly_flag, anomaly_type\nFROM snmp_metrics_ai\nORDER BY STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') DESC\nLIMIT 50",
+          "rawSql": "SELECT DATE_FORMAT(ts, '%Y-%m-%d %H:%i:%s') AS timestamp, host, ip, anomaly_score, anomaly_flag, anomaly_type\nFROM (\n  SELECT\n    STR_TO_DATE(timestamp, '%Y-%m-%dT%H:%i:%s.%f') AS ts,\n    host,\n    ip,\n    anomaly_score,\n    anomaly_flag,\n    anomaly_type\n  FROM snmp_metrics_ai\n) s\nWHERE ts IS NOT NULL\nAND $__timeFilter(ts)\nORDER BY ts DESC\nLIMIT 50",
           "refId": "A"
         }
       ],
