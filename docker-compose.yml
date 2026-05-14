@@ -34,7 +34,7 @@ services:
       MYSQL_USER: snmpuser
       MYSQL_PASSWORD: snmppass
     ports:
-      - "5000:3306"   # ✅ changed to 3307 so it won't clash with your local MySQL
+      - "5000:3306"   
     volumes:
       - mysql_data:/var/lib/mysql
 

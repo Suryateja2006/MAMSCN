@@ -16,7 +16,7 @@ KAFKA_BOOTSTRAP = "localhost:9092"
 KAFKA_TOPIC = "snmp_metrics"
 OUTPUT_CSV = "snmp_consumed_ai.csv"
 
-ANOMALY_THRESHOLD = -0.1  # Adjust based on dataset
+ANOMALY_THRESHOLD = -0.2  # Adjust based on dataset
 
 # --- OID to feature mapping ---
 OID_TO_FEATURE = {
